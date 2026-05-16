@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Enigma – Wie funktioniert das?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=IBM+Plex+Mono:wght@400;600&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #1a1209;
+  --paper: #f5efe3;
+  --paper2: #ede5d0;
+  --paper3: #e0d5be;
+  --brass: #b07d2a;
+  --brass2: #d4a44a;
+  --brass-soft: #f7ead2;
+  --steel: #3a4a5c;
+  --steel2: #5a7080;
+  --steel-soft: #e2eaf0;
+  --signal: #c0392b;
+  --signal-soft: #fdecea;
+  --green: #2e7d52;
+  --green-soft: #e6f5ed;
+  --dim: #7a6e5f;
+  --line: #cfc4ad;
+  --r: 4px;
+  --shadow-sm: 0 2px 8px rgba(26,18,9,0.10);
+  --shadow-md: 0 8px 28px rgba(26,18,9,0.14);
+  --shadow-lg: 0 20px 60px rgba(26,18,9,0.18);
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── NOISE TEXTURE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 4rem 2rem 3rem;
+  text-align: center;
+  border-bottom: 2px solid var(--line);
+  overflow: hidden;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(176,125,42,0.13), transparent),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(58,74,92,0.09), transparent);
+  pointer-events: none;
+}
+
+.hero-eyebrow {
+  display: inline-block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--brass);
+  border: 1px solid var(--brass2);
+  border-radius: 2px;
+  padding: 0.3rem 0.7rem;
+  margin-bottom: 1.2rem;
+}
+
+.hero h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(2.8rem, 7vw, 5.5rem);
+  font-weight: 900;
+  line-height: 1.0;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  margin-bottom: 1rem;
+}
+
+.hero h1 em {
+  font-style: italic;
+  color: var(--brass);
+}
+
+.hero-sub {
+  max-width: 580px;
+  margin: 0 auto 2rem;
+  color: var(--dim);
+  font-style: italic;
+  font-size: 1.05rem;
+}
+
+/* ── PROGRESS NAV ── */
+.progress-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(245,239,227,0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.progress-nav::-webkit-scrollbar { display: none; }
+
+.nav-step {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.nav-step:hover { background: var(--paper2); color: var(--ink); }
+.nav-step.active {
+  background: var(--ink);
+  color: var(--paper);
+  border-color: var(--ink);
+}
+.nav-step.done {
+  background: var(--brass-soft);
+  color: var(--brass);
+  border-color: var(--brass2);
+}
+.nav-num {
+  font-weight: 600;
+  font-size: 0.65rem;
+}
+
+/* ── MAIN LAYOUT ── */
+.main-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ── CHAPTER ── */
+.chapter {
+  padding: 3rem 0 1rem;
+  border-bottom: 1px solid var(--line);
+}
+.chapter:last-child { border-bottom: none; }
+
+.chapter-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 1.8rem;
+}
+
+.chapter-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--brass2);
+  opacity: 0.5;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.chapter-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* ── PROSE ── */
+.prose {
+  max-width: 680px;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: var(--ink);
+}
+.prose p { margin-bottom: 0.9rem; }
+.prose strong { color: var(--ink); font-weight: 700; }
+.prose em { color: var(--brass); font-style: italic; }
+
+.callout {
+  border-left: 3px solid var(--brass2);
+  background: var(--brass-soft);
+  padding: 0.9rem 1.1rem;
+  border-radius: 0 var(--r) var(--r) 0;
+  font-style: italic;
+  font-size: 0.96rem;
+  color: #5a3e0f;
+  margin: 1.2rem 0;
+}
+.callout strong { font-style: normal; color: #5a3e0f; }
+
+.callout.info {
+  border-color: var(--steel2);
+  background: var(--steel-soft);
+  color: #1e3040;
+}
+.callout.info strong { color: #1e3040; }
+
+/* ── TWO COL ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.8rem;
+  align-items: start;
+}
+@media (max-width: 700px) { .two-col { grid-template-columns: 1fr; } }
+
+/* ── DEMO CARD ── */
+.demo-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.demo-card-header {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 0.6rem 1rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.demo-card-header::before {
+  content: '';
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--brass2);
+  flex-shrink: 0;
+}
+
+.demo-card-body { padding: 1.2rem; }
+
+/* ── CIPHER COMPARISON ── */
+.cipher-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
+  margin-top: 0.5rem;
+}
+.cipher-table th {
+  background: var(--paper2);
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  border-bottom: 1px solid var(--line);
+}
+.cipher-table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--paper2);
+  color: var(--ink);
+}
+.cipher-table tr:last-child td { border-bottom: none; }
+.cipher-table .hl { color: var(--brass); font-weight: 600; }
+.cipher-table .out { color: var(--signal); font-weight: 600; }
+
+/* ── ROTOR VISUAL ── */
+.rotor-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.rotor-machine {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--ink);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.machine-side {
+  padding: 0.8rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 52px;
+}
+.machine-side.input { background: rgba(176,125,42,0.25); }
+.machine-side.output { background: rgba(192,57,43,0.25); }
+
+.machine-side-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,239,227,0.5);
+}
+
+.machine-letter {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.8rem;
+  font-weight: 900;
+  color: var(--paper);
+  line-height: 1;
+  min-width: 2rem;
+  text-align: center;
+  transition: all 0.3s;
+}
+.machine-letter.gold { color: var(--brass2); }
+.machine-letter.red { color: #e74c3c; }
+
+.rotors-row {
+  display: flex;
+  flex: 1;
+  border-left: 1px solid rgba(255,255,255,0.08);
+  border-right: 1px solid rgba(255,255,255,0.08);
+}
+
+.rotor-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.6rem 0.4rem;
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.rotor-col:last-child { border-right: none; }
+
+.rotor-col-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,239,227,0.4);
+  margin-bottom: 0.3rem;
+}
+
+.rotor-wheel {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2e3a4a, #1a2530);
+  border: 2px solid rgba(176,125,42,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', serif;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--brass2);
+  transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), border-color 0.2s;
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.4);
+}
+.rotor-wheel.spin {
+  border-color: var(--brass2);
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3), 0 0 12px rgba(176,125,42,0.5);
+}
+
+.reflector-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.7rem;
+  border-right: 1px solid rgba(255,255,255,0.07);
+}
+.reflector-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245,239,227,0.4);
+  margin-bottom: 0.3rem;
+  text-align: center;
+}
+.reflector-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(58,74,92,0.6);
+  border: 1px solid rgba(90,112,128,0.5);
+}
+
+/* ── SIGNAL PATH ── */
+.signal-path {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.signal-step {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  opacity: 0.3;
+  transition: opacity 0.3s;
+}
+.signal-step.active { opacity: 1; }
+
+.signal-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.4rem 0.7rem;
+  background: var(--paper2);
+  border: 1px solid var(--line);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+}
+.signal-step:first-child .signal-node { border-radius: var(--r) var(--r) 0 0; }
+.signal-step:last-child .signal-node { border-radius: 0 0 var(--r) var(--r); }
+.signal-step.active .signal-node {
+  background: var(--brass-soft);
+  border-color: var(--brass2);
+}
+.signal-step.active:last-child .signal-node {
+  background: var(--signal-soft);
+  border-color: var(--signal);
+}
+
+.signal-label { color: var(--dim); font-size: 0.72rem; }
+.signal-val { color: var(--ink); font-weight: 600; letter-spacing: 0.08em; }
+.signal-step.active:last-child .signal-val { color: var(--signal); }
+
+.signal-arrow {
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.8rem;
+  padding: 0.05rem 0;
+  line-height: 1;
+}
+
+/* ── INTERACTIVE DEMO ── */
+.interactive-keyboard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.key-row-i {
+  display: flex;
+  justify-content: center;
+  gap: 0.3rem;
+}
+
+.key-i {
+  width: 36px;
+  height: 36px;
+  border-radius: 3px;
+  border: 1.5px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.08), 0 3px 0 var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.key-i:hover { background: var(--paper2); transform: translateY(-1px); }
+.key-i:active { transform: translateY(1px); box-shadow: none; }
+.key-i.lit-in {
+  background: var(--brass);
+  color: #fff;
+  border-color: var(--brass);
+  box-shadow: 0 0 10px rgba(176,125,42,0.5), 0 3px 0 #7a5015;
+}
+.key-i.lit-out {
+  background: var(--signal);
+  color: #fff;
+  border-color: var(--signal);
+  box-shadow: 0 0 10px rgba(192,57,43,0.5), 0 3px 0 #7a1a0f;
+}
+
+.io-display {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+  margin-top: 0.8rem;
+}
+
+.io-box {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--r);
+  border: 1px solid var(--line);
+  background: var(--paper2);
+}
+.io-box-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 0.35rem;
+}
+.io-box-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.95rem;
+  min-height: 1.5rem;
+  word-break: break-all;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.io-box-text.highlight { color: var(--signal); }
+
+/* ── COUNTER DEMO ── */
+.counter-demo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.counter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--paper2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.88rem;
+}
+.counter-row .press-count {
+  color: var(--dim);
+  font-size: 0.75rem;
+  min-width: 70px;
+}
+.counter-row .input-letter { color: var(--brass); font-weight: 600; font-size: 1rem; }
+.counter-row .arrow { color: var(--dim); }
+.counter-row .output-letter { color: var(--signal); font-weight: 600; font-size: 1rem; }
+.counter-row .rotor-state { color: var(--dim); font-size: 0.72rem; margin-left: auto; }
+
+/* ── VIGENERE DEMO ── */
+.vig-demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.vig-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.vig-row-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+.vig-letters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.vig-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 2px;
+  border: 1px solid var(--line);
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.vig-cell.key-c { background: var(--steel-soft); color: var(--steel); border-color: var(--steel2); }
+.vig-cell.cipher-c { background: var(--signal-soft); color: var(--signal); border-color: var(--signal); }
+.vig-cell.repeating { border-color: var(--brass2); background: var(--brass-soft); color: var(--brass); }
+
+/* ── HISTORY SECTION ── */
+.timeline {
+  position: relative;
+  padding-left: 1.8rem;
+  margin-top: 1.5rem;
+}
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.6rem;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(to bottom, var(--brass2), var(--line));
+}
+.timeline-item {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -1.5rem;
+  top: 0.45rem;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brass2);
+  border: 2px solid var(--paper);
+  box-shadow: 0 0 0 1px var(--brass2);
+}
+.timeline-year {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--brass);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin-bottom: 0.15rem;
+}
+.timeline-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.timeline-text {
+  font-size: 0.95rem;
+  color: var(--dim);
+  line-height: 1.55;
+}
+
+/* ── QUIZ / INSIGHT BOX ── */
+.insight {
+  margin-top: 2rem;
+  padding: 1.4rem;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-lg);
+}
+.insight-head {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--brass2);
+  margin-bottom: 0.6rem;
+}
+.insight p {
+  font-size: 1.0rem;
+  line-height: 1.65;
+  color: rgba(245,239,227,0.85);
+}
+.insight em { color: var(--brass2); font-style: italic; }
+.insight strong { color: var(--paper); }
+
+/* ── COMPARISON TABLE ── */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin-top: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+@media (max-width: 700px) { .comp-grid { grid-template-columns: 1fr; } }
+
+.comp-col {
+  padding: 1.2rem;
+  border-right: 1px solid var(--line);
+  background: #fff;
+}
+.comp-col:last-child { border-right: none; }
+.comp-col:nth-child(3) { background: var(--brass-soft); }
+
+.comp-col-head {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+.comp-col-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 0.9rem;
+}
+.comp-row {
+  margin-bottom: 0.6rem;
+}
+.comp-row-label {
+  font-size: 0.75rem;
+  color: var(--dim);
+  margin-bottom: 0.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+}
+.comp-row-val {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.comp-row-val.good { color: var(--green); }
+.comp-row-val.bad { color: var(--signal); }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 2px;
+  border: none;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.btn-primary {
+  background: var(--ink);
+  color: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+.btn-primary:hover { background: #2d2010; transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-ghost {
+  background: transparent;
+  color: var(--dim);
+  border: 1px solid var(--line);
+}
+.btn-ghost:hover { background: var(--paper2); color: var(--ink); }
+
+.btn-row-g {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.9rem;
+}
+
+/* ── SCROLL FADE IN ── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.fade-in.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── OBSERVATION STRIP ── */
+.obs-strip {
+  margin-top: 1.2rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+.obs-tile {
+  padding: 0.9rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  box-shadow: var(--shadow-sm);
+}
+.obs-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+.obs-title { font-family: 'Playfair Display', serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.25rem; }
+.obs-text { font-size: 0.85rem; color: var(--dim); line-height: 1.45; }
+
+/* Footer */
+footer {
+  text-align: center;
+  padding: 2rem;
+  color: var(--dim);
+  font-size: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-eyebrow">Kryptographie · Geschichte · Informatik</div>
+  <h1>Die <em>Enigma</em></h1>
+  <p class="hero-sub">Wie funktioniert eine Maschine, die so komplex ist, dass selbst ein Jahr Rechenarbeit nicht reicht, um sie zu knacken?</p>
+</header>
+
+<!-- STICKY NAV -->
+<nav class="progress-nav" id="progressNav">
+  <button class="nav-step active" onclick="scrollTo('#ch1')"><span class="nav-num">01</span> Einstieg</button>
+  <button class="nav-step" onclick="scrollTo('#ch2')"><span class="nav-num">02</span> Walzen-Prinzip</button>
+  <button class="nav-step" onclick="scrollTo('#ch3')"><span class="nav-num">03</span> Der Signalweg</button>
+  <button class="nav-step" onclick="scrollTo('#ch4')"><span class="nav-num">04</span> Live-Demo</button>
+  <button class="nav-step" onclick="scrollTo('#ch5')"><span class="nav-num">05</span> vs. Vigenère</button>
+  <button class="nav-step" onclick="scrollTo('#ch6')"><span class="nav-num">06</span> Geschichte</button>
+</nav>
+
+<div class="main-wrap">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 1: EINSTIEG -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch1">
+    <div class="chapter-header">
+      <div class="chapter-num">01</div>
+      <h2 class="chapter-title">Was ist überhaupt das Problem?</h2>
+    </div>
+
+    <div class="two-col">
+      <div class="prose">
+        <p>Stell dir vor, du willst eine Nachricht verschlüsseln. Die einfachste Methode: Du verschiebst jeden Buchstaben um einen festen Wert. Das nennt sich <strong>Caesar-Verschlüsselung</strong>.</p>
+        <p>Aus <strong>A</strong> wird <strong>D</strong>, aus <strong>B</strong> wird <strong>E</strong>, immer die gleiche Verschiebung, immer das gleiche Muster.</p>
+
+        <div class="callout">
+          <strong>Das Problem:</strong> Weil deutsche Texte immer ähnliche Buchstaben-Häufigkeiten haben (E ist sehr häufig, Y selten), kann man einfach zählen und so den Schlüssel erraten. Das dauert keine fünf Minuten.
+        </div>
+
+        <p>Die Lösung klingt simpel: Was, wenn sich die Verschlüsselung <em>nach jedem Buchstaben ändert?</em> Genau das ist die Grundidee der Enigma.</p>
+      </div>
+
+      <div class="demo-card">
+        <div class="demo-card-header">Caesar – immer gleich</div>
+        <div class="demo-card-body">
+          <table class="cipher-table">
+            <thead>
+              <tr>
+                <th>Position</th>
+                <th>Buchstabe</th>
+                <th>Verschiebung</th>
+                <th>Ergebnis</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>1.</td><td class="hl">A</td><td>+3</td><td class="out">D</td></tr>
+              <tr><td>2.</td><td class="hl">A</td><td>+3</td><td class="out">D</td></tr>
+              <tr><td>3.</td><td class="hl">A</td><td>+3</td><td class="out">D</td></tr>
+              <tr><td>4.</td><td class="hl">A</td><td>+3</td><td class="out">D</td></tr>
+              <tr><td>5.</td><td class="hl">A</td><td>+3</td><td class="out">D</td></tr>
+            </tbody>
+          </table>
+          <div class="callout info" style="margin-top:0.9rem; font-size:0.88rem;">
+            Derselbe Buchstabe, immer dasselbe Ergebnis. <strong>Trivial zu knacken.</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 2: WALZEN-PRINZIP -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch2">
+    <div class="chapter-header">
+      <div class="chapter-num">02</div>
+      <h2 class="chapter-title">Was ist eine Walze?</h2>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="prose">
+          <p>Eine <strong>Walze</strong> (auch Rotor) ist eine Scheibe mit 26 elektrischen Kontakten auf jeder Seite, je einmal für jeden Buchstaben des Alphabets.</p>
+          <p>Im Innern sind die Kontakte <em>verdrahtet</em>: Strom kommt bei A rein, kommt vielleicht bei K raus. Das ist eine einfache Substitution und noch nicht revolutionär.</p>
+          <p>Der entscheidende Trick: Die Walze <strong>dreht sich nach jedem Tastendruck</strong> um eine Position weiter. Dadurch ändert sich die Verdrahtung effektiv bei jedem Buchstaben.</p>
+        </div>
+
+        <div class="callout" style="margin-top:1rem;">
+          <strong>Analogie:</strong> Stell dir eine Nummernscheibe am Fahrradschloss vor. Wenn du nach jeder Ziffer drehst, entsteht ein völlig anderer Code, obwohl die Ziffern grundsätzlich dieselben sind.
+        </div>
+
+        <div class="prose" style="margin-top:1rem;">
+          <p>Die Enigma hat <strong>drei Walzen</strong> in Reihe. Und sie dreht sich wie ein Kilometerzähler: Die rechte Walze dreht sich bei jedem Druck, die mittlere dreht erst nach 26 Buchstaben mit, die linke nach weiteren 676.</p>
+          <p>Ergebnis: <em>26 × 26 × 26 = 17.576</em> verschiedene Walzenstellungen und das ist erst der Anfang der Verschlüsselung.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="demo-card">
+          <div class="demo-card-header">Walze – dreht sich mit</div>
+          <div class="demo-card-body">
+            <table class="cipher-table">
+              <thead>
+                <tr>
+                  <th>Presse</th>
+                  <th>Walze steht auf</th>
+                  <th>Eingabe</th>
+                  <th>Ausgabe</th>
+                </tr>
+              </thead>
+              <tbody id="rotorStepTable">
+                <tr><td>1×</td><td class="hl">A</td><td>A</td><td class="out">?</td></tr>
+                <tr><td>2×</td><td class="hl">B</td><td>A</td><td class="out">?</td></tr>
+                <tr><td>3×</td><td class="hl">C</td><td>A</td><td class="out">?</td></tr>
+                <tr><td>4×</td><td class="hl">D</td><td>A</td><td class="out">?</td></tr>
+                <tr><td>5×</td><td class="hl">E</td><td>A</td><td class="out">?</td></tr>
+              </tbody>
+            </table>
+            <div class="btn-row-g">
+              <button class="btn btn-primary" onclick="fillRotorTable()">Auflösen →</button>
+              <button class="btn btn-ghost" onclick="resetRotorTable()">Zurück</button>
+            </div>
+            <div id="rotorTableNote" style="display:none; margin-top:0.8rem;" class="callout">
+              <strong>Beobachtung:</strong> Fünfmal A gedrückt und fünf verschiedene Ausgaben. Eine einfache Häufigkeitsanalyse greift ins Leere.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 3: SIGNALWEG -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch3">
+    <div class="chapter-header">
+      <div class="chapter-num">03</div>
+      <h2 class="chapter-title">Der Weg eines Buchstabens</h2>
+    </div>
+
+    <div class="prose">
+      <p>Was passiert genau, wenn du eine Taste drückst? Der elektrische Strom fließt durch die gesamte Maschine und zwar <em>hin und zurück.</em></p>
+    </div>
+
+    <div class="two-col" style="margin-top:1.5rem;">
+      <div>
+        <div class="demo-card">
+          <div class="demo-card-header">Maschine – Schritt für Schritt</div>
+          <div class="demo-card-body">
+            <div class="rotor-visual">
+              <div class="rotor-machine" id="signalMachine">
+                <div class="machine-side input">
+                  <div class="machine-side-label">Taste</div>
+                  <div class="machine-letter gold" id="sigIn">A</div>
+                </div>
+                <div class="rotors-row">
+                  <div class="reflector-col">
+                    <div class="reflector-label">Ref<br>l.</div>
+                    <div class="reflector-circle"></div>
+                  </div>
+                  <div class="rotor-col">
+                    <div class="rotor-col-label">Links</div>
+                    <div class="rotor-wheel" id="sigR0">A</div>
+                  </div>
+                  <div class="rotor-col">
+                    <div class="rotor-col-label">Mitte</div>
+                    <div class="rotor-wheel" id="sigR1">A</div>
+                  </div>
+                  <div class="rotor-col">
+                    <div class="rotor-col-label">Rechts</div>
+                    <div class="rotor-wheel" id="sigR2">A</div>
+                  </div>
+                </div>
+                <div class="machine-side output">
+                  <div class="machine-side-label">Lampe</div>
+                  <div class="machine-letter red" id="sigOut">?</div>
+                </div>
+              </div>
+
+              <div class="signal-path" id="signalPath">
+                <div class="signal-step" id="sp0">
+                  <div class="signal-node"><span class="signal-label">① Tastendruck</span><span class="signal-val" id="spv0">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp1">
+                  <div class="signal-node"><span class="signal-label">② Walze rechts (Hinweg)</span><span class="signal-val" id="spv1">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp2">
+                  <div class="signal-node"><span class="signal-label">③ Walze Mitte (Hinweg)</span><span class="signal-val" id="spv2">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp3">
+                  <div class="signal-node"><span class="signal-label">④ Walze links (Hinweg)</span><span class="signal-val" id="spv3">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp4">
+                  <div class="signal-node"><span class="signal-label">⑤ Reflektor (Umkehr)</span><span class="signal-val" id="spv4">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp5">
+                  <div class="signal-node"><span class="signal-label">⑥ Rückweg (links→rechts)</span><span class="signal-val" id="spv5">—</span></div>
+                </div>
+                <div class="signal-arrow">↓</div>
+                <div class="signal-step" id="sp6">
+                  <div class="signal-node"><span class="signal-label">⑦ Lampe leuchtet auf</span><span class="signal-val" id="spv6">—</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="btn-row-g">
+              <button class="btn btn-primary" onclick="runSignalDemo()">Signal verfolgen →</button>
+              <button class="btn btn-ghost" onclick="resetSignalDemo()">Zurücksetzen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p><strong>① Tastendruck:</strong> Du drückst eine Taste, z. B. <strong>A</strong>. Gleichzeitig dreht sich die rechte Walze automatisch um eine Position weiter.</p>
+        <p><strong>② – ④ Hinweg:</strong> Das elektrische Signal läuft von rechts nach links durch alle drei Walzen. Jede Walze ersetzt den Buchstaben, aber versetzt durch ihre aktuelle Drehposition.</p>
+        <p><strong>⑤ Reflektor:</strong> Am Ende der Walzen sitzt ein fester Reflektor. Er spiegelt das Signal zurück in einen anderen Buchstaben. Das ist der Punkt, der alles umkehrt.</p>
+        <p><strong>⑥ Rückweg:</strong> Jetzt läuft das Signal rückwärts durch alle drei Walzen noch einmal. Jede Walze verschlüsselt erneut, diesmal in Rückrichtung.</p>
+
+        <div class="callout">
+          <strong>Warum der Reflektor wichtig ist:</strong> Durch ihn ist das Verfahren <em>symmetrisch</em>: Sender und Empfänger benutzen dieselben Einstellungen. Was einmal als A rauskommt, ergibt mit denselben Einstellungen wieder A – wenn du das verschlüsselte Zeichen eingibst.
+        </div>
+
+        <div class="callout" style="margin-top:0.8rem;">
+          <strong>Aber:</strong> Der Reflektor sorgt auch dafür, dass <em>kein Buchstabe sich selbst</em> verschlüsseln kann. Das wurde später von den Codeknackern in Bletchley Park ausgenutzt.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 4: LIVE DEMO -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch4">
+    <div class="chapter-header">
+      <div class="chapter-num">04</div>
+      <h2 class="chapter-title">Selbst ausprobieren</h2>
+    </div>
+
+    <div class="prose">
+      <p>Drücke mehrmals denselben Buchstaben. Beobachte, wie sich die Walzenstellung ändert und wie derselbe Buchstabe jedes Mal anders verschlüsselt wird.</p>
+    </div>
+
+    <div class="two-col" style="margin-top:1.5rem;">
+      <div>
+        <div class="demo-card">
+          <div class="demo-card-header">Enigma · Tastatur</div>
+          <div class="demo-card-body">
+            <div class="interactive-keyboard" id="iKeyboard"></div>
+            <div class="io-display">
+              <div class="io-box">
+                <div class="io-box-label">Klartext</div>
+                <div class="io-box-text" id="liveInput">–</div>
+              </div>
+              <div class="io-box">
+                <div class="io-box-label">Geheimtext</div>
+                <div class="io-box-text highlight" id="liveOutput">–</div>
+              </div>
+            </div>
+            <div class="btn-row-g">
+              <button class="btn btn-ghost" onclick="resetLive()">↺ Zurücksetzen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="demo-card">
+          <div class="demo-card-header">Protokoll – jeder Tastendruck</div>
+          <div class="demo-card-body">
+            <div class="counter-demo" id="liveLog" style="max-height: 280px; overflow-y: auto;">
+              <div style="color:var(--dim); font-size:0.85rem; font-style:italic; padding: 0.5rem 0;">Noch keine Eingabe …</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="obs-strip" style="margin-top:0.8rem;">
+          <div class="obs-tile">
+            <div class="obs-icon">🔁</div>
+            <div class="obs-title">Kein Muster sichtbar</div>
+            <div class="obs-text">Drücke 5× A. Du bekommst 5 verschiedene Buchstaben – Häufigkeitsanalyse versagt.</div>
+          </div>
+          <div class="obs-tile">
+            <div class="obs-icon">🔒</div>
+            <div class="obs-title">Symmetrisch</div>
+            <div class="obs-text">Gib den Geheimtext neu ein (nach Reset mit gleicher Startstellung): Du bekommst den Klartext zurück.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 5: VIGENERE VERGLEICH -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch5">
+    <div class="chapter-header">
+      <div class="chapter-num">05</div>
+      <h2 class="chapter-title">Enigma vs. Vigenère</h2>
+    </div>
+
+    <div class="prose">
+      <p>Die <strong>Vigenère-Verschlüsselung</strong> war bis um 1900 als unknackbar bekannt und war es lange auch. Sie benutzt ein Schlüsselwort, das immer wiederholt wird. Klingt ähnlich wie die Enigma. Aber es gibt einen entscheidenden Unterschied.</p>
+    </div>
+
+    <div class="two-col" style="margin-top:1.5rem;">
+      <div>
+        <div class="demo-card">
+          <div class="demo-card-header">Vigenère – Schlüsselwort: "GEHEIM"</div>
+          <div class="demo-card-body">
+            <div class="vig-demo">
+              <div class="vig-row">
+                <div class="vig-row-label">Klartext</div>
+                <div class="vig-letters">
+                  <div class="vig-cell">D</div><div class="vig-cell">I</div><div class="vig-cell">E</div>
+                  <div class="vig-cell">E</div><div class="vig-cell">N</div><div class="vig-cell">I</div>
+                  <div class="vig-cell">G</div><div class="vig-cell">M</div><div class="vig-cell">A</div>
+                  <div class="vig-cell">I</div><div class="vig-cell">S</div><div class="vig-cell">T</div>
+                </div>
+              </div>
+              <div class="vig-row">
+                <div class="vig-row-label">Schlüssel (wiederholt)</div>
+                <div class="vig-letters">
+                  <div class="vig-cell key-c">G</div><div class="vig-cell key-c">E</div><div class="vig-cell key-c">H</div>
+                  <div class="vig-cell key-c repeating">E</div><div class="vig-cell key-c repeating">I</div><div class="vig-cell key-c repeating">M</div>
+                  <div class="vig-cell key-c">G</div><div class="vig-cell key-c">E</div><div class="vig-cell key-c">H</div>
+                  <div class="vig-cell key-c repeating">E</div><div class="vig-cell key-c repeating">I</div><div class="vig-cell key-c repeating">M</div>
+                </div>
+              </div>
+              <div class="vig-row">
+                <div class="vig-row-label">Geheimtext</div>
+                <div class="vig-letters">
+                  <div class="vig-cell cipher-c">J</div><div class="vig-cell cipher-c">M</div><div class="vig-cell cipher-c">L</div>
+                  <div class="vig-cell cipher-c">I</div><div class="vig-cell cipher-c">V</div><div class="vig-cell cipher-c">U</div>
+                  <div class="vig-cell cipher-c">M</div><div class="vig-cell cipher-c">Q</div><div class="vig-cell cipher-c">H</div>
+                  <div class="vig-cell cipher-c">M</div><div class="vig-cell cipher-c">A</div><div class="vig-cell cipher-c">F</div>
+                </div>
+              </div>
+            </div>
+            <div class="callout" style="margin-top:0.9rem;">
+              Die <span style="color:var(--brass);font-weight:700;">goldenen</span> Zellen zeigen: Weil der Schlüssel sich wiederholt, kommt dasselbe E des Klartexts (Position 1 und 4) mit denselben Schlüsselbuchstaben zusammen – und ergibt das gleiche Muster.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prose">
+        <p>Das Muster entsteht durch die <strong>Periodizität</strong> des Schlüssels. Charles Babbage und Friedrich Kasiski fanden im 19. Jahrhundert Methoden, die Schlüssellänge zu bestimmen und dann die Vigenère zu knacken.</p>
+        <p>Die <strong>Enigma hat keine Periode</strong>. Die drei Walzen, die sich mit unterschiedlicher Geschwindigkeit drehen, erzeugen eine Schlüsselsequenz, die erst nach <em>17.576 Buchstaben</em> wiederholt – länger als fast jede Nachricht.</p>
+
+        <div class="comp-grid" style="margin-top:1.2rem;">
+          <div class="comp-col">
+            <div class="comp-col-head">Caesar</div>
+            <div class="comp-col-sub">~50 v. Chr.</div>
+            <div class="comp-row"><div class="comp-row-label">Schlüsselraum</div><div class="comp-row-val bad">26 Möglichkeiten</div></div>
+            <div class="comp-row"><div class="comp-row-label">Periode</div><div class="comp-row-val bad">1 Buchstabe</div></div>
+            <div class="comp-row"><div class="comp-row-label">Angriff</div><div class="comp-row-val bad">Ausprobieren</div></div>
+          </div>
+          <div class="comp-col">
+            <div class="comp-col-head">Vigenère</div>
+            <div class="comp-col-sub">~1553</div>
+            <div class="comp-row"><div class="comp-row-label">Schlüsselraum</div><div class="comp-row-val">26<sup>n</sup></div></div>
+            <div class="comp-row"><div class="comp-row-label">Periode</div><div class="comp-row-val bad">= Schlüsselwort</div></div>
+            <div class="comp-row"><div class="comp-row-label">Angriff</div><div class="comp-row-val bad">Kasiski-Test</div></div>
+          </div>
+          <div class="comp-col">
+            <div class="comp-col-head">Enigma</div>
+            <div class="comp-col-sub">~1923</div>
+            <div class="comp-row"><div class="comp-row-label">Schlüsselraum</div><div class="comp-row-val good">&gt; 10<sup>23</sup></div></div>
+            <div class="comp-row"><div class="comp-row-label">Periode</div><div class="comp-row-val good">17.576+ Schritte</div></div>
+            <div class="comp-row"><div class="comp-row-label">Angriff</div><div class="comp-row-val">Bombe / Logik</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- KAPITEL 6: GESCHICHTE -->
+  <!-- ═══════════════════════════════════════════ -->
+  <section class="chapter fade-in" id="ch6">
+    <div class="chapter-header">
+      <div class="chapter-num">06</div>
+      <h2 class="chapter-title">Historische Bedeutung</h2>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="timeline">
+          <div class="timeline-item">
+            <div class="timeline-year">1918</div>
+            <div class="timeline-title">Arthur Scherbius erfindet die Enigma</div>
+            <div class="timeline-text">Als kommerzielles Gerät für Banken gedacht. Die deutsche Wehrmacht übernimmt sie und rüstet die Maschine weiter auf.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1932</div>
+            <div class="timeline-title">Marian Rejewski knackt die erste Version</div>
+            <div class="timeline-text">Der polnische Mathematiker entschlüsselt die frühe Enigma durch Mathematik ohne jemals eine echte Maschine gesehen zu haben. Polen übergibt das Wissen 1939 an England und Frankreich.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1940–45</div>
+            <div class="timeline-title">Bletchley Park – Alan Turing</div>
+            <div class="timeline-text">Turing und sein Team bauen die <strong>Bombe</strong>, eine elektromechanische Maschine, die mögliche Enigma-Einstellungen systematisch ausschließt. Täglich werden tausende Nachrichten entschlüsselt.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">1945</div>
+            <div class="timeline-title">Kriegswende – Informatik entsteht</div>
+            <div class="timeline-text">Historiker schätzen, der Krieg wurde durch die Entschlüsselung um bis zu zwei Jahre verkürzt. Turings Arbeit legt die Grundlagen für moderne Computerwissenschaft und maschinelle Berechnung.</div>
+          </div>
+          <div class="timeline-item">
+            <div class="timeline-year">Heute</div>
+            <div class="timeline-title">Das Erbe</div>
+            <div class="timeline-text">Jedes Mal, wenn dein Browser das Schloss-Symbol zeigt – HTTPS – benutzt er kryptografische Ideen, die auf Turings Arbeit aufbauen. Die Enigma ist der "Urknall" moderner Cybersicherheit.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="insight">
+          <div class="insight-head">Warum das wichtig für die Informatik ist</div>
+          <p>Alan Turing fragte: <em>„Welche Aufgaben kann eine Maschine prinzipiell lösen?"</em> Die Bombe war der erste Schritt zur Antwort. Die Enigma zwang ihn, über <em>Algorithmen, Automatisierung und Rechenmaschinen</em> nachzudenken. Das waren genau die Konzepte, die direkt in den ersten Computern landeten.</p>
+        </div>
+
+        <div class="callout" style="margin-top:1.2rem;">
+          <strong>Kryptographie als Wettlauf:</strong> Die Wehrmacht glaubte, die Enigma sei durch schiere Anzahl der Möglichkeiten unknackbar. Turing zeigte: <em>Es kommt nicht auf die Anzahl der Möglichkeiten an, sondern darauf, ob man sie strukturiert ausschließen kann.</em> Das ist bis heute das Prinzip jedes Kryptoangriffs.
+        </div>
+
+        <div class="callout info" style="margin-top:0.8rem;">
+          <strong>Die Schwachstelle der Enigma</strong> war nicht mathematisch, sondern menschlich: Funker verwendeten vorhersehbare Schlüssel wie „AAA" oder wiederholten Nachrichten. Die Bombe nutzte genau diese Muster, sogenannte <em>Cribs</em> (bekannte Klartextfragmente), um den Suchraum dramatisch zu verkleinern.
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  Eine interaktive Simulation zum Verständnis des Enigma-Prinzips · Didaktisches Modell, vereinfacht
+</footer>
+
+<script>
+/* ───────────────────────────────────────────
+   ENIGMA SIMULATION CORE
+   (vereinfacht, didaktisch)
+─────────────────────────────────────────── */
+const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+const ROTORS = [
+  "EKMFLGDQVZNTOWYHXUSPAIBRCJ",  // I
+  "AJDKSIRUXBLHWTMCQGZNPYFVOE",  // II
+  "BDFHJLCPRTXVZNYEIWGAKMUSQO"   // III
+];
+const REFLECTOR = "YRUHQSLDPXNGOKMIEBFZCWVJAT";
+
+let positions = [0, 0, 0];
+let liveInput = "";
+let liveOutput = "";
+
+function mod(n, m) { return ((n % m) + m) % m; }
+function idx(ch) { return ALPHA.indexOf(ch); }
+function let_(i) { return ALPHA[mod(i, 26)]; }
+
+function rotorFwd(v, r, p) {
+  const s = mod(v + p, 26);
+  const out = idx(ROTORS[r][s]);
+  return mod(out - p, 26);
+}
+function rotorBwd(v, r, p) {
+  const s = mod(v + p, 26);
+  const ch = let_(s);
+  const out = ROTORS[r].indexOf(ch);
+  return mod(out - p, 26);
+}
+function reflect(v) { return idx(REFLECTOR[v]); }
+
+function stepRotors() {
+  positions[2]++;
+  if (positions[2] >= 26) { positions[2] = 0; positions[1]++; }
+  if (positions[1] >= 26) { positions[1] = 0; positions[0]++; }
+  if (positions[0] >= 26) { positions[0] = 0; }
+}
+
+function encrypt(ch) {
+  ch = ch.toUpperCase();
+  if (!ALPHA.includes(ch)) return ch;
+
+  stepRotors();
+
+  let v = idx(ch);
+  const a_hin_r = v;
+  v = rotorFwd(v, 2, positions[2]);
+  const a_hin_m = v;
+  v = rotorFwd(v, 1, positions[1]);
+  const a_hin_l = v;
+  v = rotorFwd(v, 0, positions[0]);
+  const a_refl = v;
+  v = reflect(v);
+  const a_back_l = v;
+  v = rotorBwd(v, 0, positions[0]);
+  const a_back_m = v;
+  v = rotorBwd(v, 1, positions[1]);
+  const a_back_r = v;
+  v = rotorBwd(v, 2, positions[2]);
+
+  return {
+    out: let_(v),
+    path: [ch, let_(a_hin_r), let_(a_hin_m), let_(a_hin_l), let_(a_refl), let_(a_back_l), let_(a_back_m), let_(a_back_r), let_(v)]
+  };
+}
+
+/* ── SCROLL NAV ── */
+function scrollTo(sel) {
+  document.querySelector(sel)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/* ── FADE IN OBSERVER ── */
+const fader = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) e.target.classList.add('visible');
+  });
+}, { threshold: 0.06 });
+document.querySelectorAll('.fade-in').forEach(el => fader.observe(el));
+
+/* ── NAV HIGHLIGHT ── */
+const chapters = ['ch1','ch2','ch3','ch4','ch5','ch6'];
+const navBtns = document.querySelectorAll('.nav-step');
+const chapterObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const i = chapters.indexOf(e.target.id);
+      navBtns.forEach((b, j) => {
+        b.classList.toggle('active', j === i);
+      });
+    }
+  });
+}, { threshold: 0.3 });
+chapters.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) chapterObserver.observe(el);
+});
+
+/* ── ROTOR STEP TABLE ── */
+function fillRotorTable() {
+  const rotorI = "EKMFLGDQVZNTOWYHXUSPAIBRCJ";
+  const testPos = [0,1,2,3,4];
+  const rows = document.querySelectorAll('#rotorStepTable tr');
+  const letters = ['A','B','C','D','E'];
+  const outputs = testPos.map((p,i) => {
+    const v = 0; // A
+    const s = mod(v + p, 26);
+    const out = idx(rotorI[s]);
+    return let_(mod(out - p, 26));
+  });
+  rows.forEach((row, i) => {
+    row.cells[3].textContent = outputs[i];
+    row.cells[3].className = 'out';
+  });
+  document.getElementById('rotorTableNote').style.display = '';
+}
+function resetRotorTable() {
+  document.querySelectorAll('#rotorStepTable tr').forEach(row => {
+    row.cells[3].textContent = '?';
+    row.cells[3].className = 'out';
+  });
+  document.getElementById('rotorTableNote').style.display = 'none';
+}
+
+/* ── SIGNAL DEMO ── */
+let sigPos = [0,0,0];
+function runSignalDemo() {
+  // Encrypt 'A' from current position
+  const posBefore = [...sigPos];
+  // Step
+  sigPos[2]++;
+  if (sigPos[2] >= 26) { sigPos[2] = 0; sigPos[1]++; }
+  if (sigPos[1] >= 26) { sigPos[1] = 0; sigPos[0]++; }
+
+  let v = 0; // A
+  const path = ['A'];
+  const a_r = rotorFwd(v, 2, sigPos[2]); path.push(let_(a_r));
+  const a_m = rotorFwd(a_r, 1, sigPos[1]); path.push(let_(a_m));
+  const a_l = rotorFwd(a_m, 0, sigPos[0]); path.push(let_(a_l));
+  const a_rf = reflect(a_l); path.push(let_(a_rf));
+  let back = a_rf;
+  back = rotorBwd(back, 0, sigPos[0]);
+  back = rotorBwd(back, 1, sigPos[1]);
+  back = rotorBwd(back, 2, sigPos[2]);
+  const result = let_(back);
+
+  // Update machine display
+  document.getElementById('sigR0').textContent = let_(sigPos[0]);
+  document.getElementById('sigR1').textContent = let_(sigPos[1]);
+  document.getElementById('sigR2').textContent = let_(sigPos[2]);
+  document.getElementById('sigIn').textContent = 'A';
+  document.getElementById('sigOut').textContent = result;
+
+  // Update signal path
+  const labels = [
+    ['A', 'sp0', 'spv0'],
+    [path[1], 'sp1', 'spv1'],
+    [path[2], 'sp2', 'spv2'],
+    [path[3], 'sp3', 'spv3'],
+    [path[4], 'sp4', 'spv4'],
+    [`${path[4]} → … → ${result}`, 'sp5', 'spv5'],
+    [result, 'sp6', 'spv6'],
+  ];
+  labels.forEach(([val, stepId, valId], i) => {
+    setTimeout(() => {
+      document.getElementById(stepId)?.classList.add('active');
+      document.getElementById(valId).textContent = val;
+    }, i * 200);
+  });
+
+  // Spin the right rotor
+  const wheel = document.getElementById('sigR2');
+  wheel.classList.add('spin');
+  setTimeout(() => wheel.classList.remove('spin'), 400);
+}
+
+function resetSignalDemo() {
+  sigPos = [0,0,0];
+  ['sigR0','sigR1','sigR2'].forEach((id,i) => {
+    document.getElementById(id).textContent = 'A';
+    document.getElementById(id).classList.remove('spin');
+  });
+  document.getElementById('sigIn').textContent = 'A';
+  document.getElementById('sigOut').textContent = '?';
+  for (let i=0;i<7;i++) {
+    const sp = document.getElementById('sp'+i);
+    const sv = document.getElementById('spv'+i);
+    if(sp) sp.classList.remove('active');
+    if(sv) sv.textContent = '—';
+  }
+}
+
+/* ── INTERACTIVE KEYBOARD ── */
+const KB_ROWS = ["QWERTZUIOP","ASDFGHJKL","YXCVBNM"];
+
+function buildKeyboard() {
+  const container = document.getElementById('iKeyboard');
+  KB_ROWS.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'key-row-i';
+    row.split('').forEach(ch => {
+      const btn = document.createElement('button');
+      btn.className = 'key-i';
+      btn.textContent = ch;
+      btn.dataset.ch = ch;
+      btn.addEventListener('click', () => pressKey(ch));
+      rowEl.appendChild(btn);
+    });
+    container.appendChild(rowEl);
+  });
+}
+
+let livePos = [0,0,0];
+let liveInStr = '';
+let liveOutStr = '';
+let liveLog_data = [];
+
+function pressKey(ch) {
+  ch = ch.toUpperCase();
+  if (!ALPHA.includes(ch)) return;
+
+  // Encrypt
+  const posBefore = [...livePos];
+  livePos[2]++;
+  if (livePos[2] >= 26) { livePos[2] = 0; livePos[1]++; }
+  if (livePos[1] >= 26) { livePos[1] = 0; livePos[0]++; }
+
+  let v = idx(ch);
+  v = rotorFwd(v, 2, livePos[2]);
+  v = rotorFwd(v, 1, livePos[1]);
+  v = rotorFwd(v, 0, livePos[0]);
+  v = reflect(v);
+  v = rotorBwd(v, 0, livePos[0]);
+  v = rotorBwd(v, 1, livePos[1]);
+  v = rotorBwd(v, 2, livePos[2]);
+  const out = let_(v);
+
+  liveInStr += ch;
+  liveOutStr += out;
+
+  document.getElementById('liveInput').textContent = liveInStr;
+  document.getElementById('liveOutput').textContent = liveOutStr;
+
+  // Light up keys
+  document.querySelectorAll('.key-i').forEach(k => k.classList.remove('lit-in','lit-out'));
+  const inKey = document.querySelector(`.key-i[data-ch="${ch}"]`);
+  const outKey = document.querySelector(`.key-i[data-ch="${out}"]`);
+  if (inKey) { inKey.classList.add('lit-in'); setTimeout(() => inKey.classList.remove('lit-in'), 400); }
+  if (outKey) { outKey.classList.add('lit-out'); setTimeout(() => outKey.classList.remove('lit-out'), 400); }
+
+  // Log
+  liveLog_data.push({ ch, out, pos: [...livePos] });
+  updateLog();
+}
+
+function updateLog() {
+  const container = document.getElementById('liveLog');
+  container.innerHTML = '';
+  const visible = liveLog_data.slice(-8);
+  visible.forEach((entry, i) => {
+    const row = document.createElement('div');
+    row.className = 'counter-row';
+    row.innerHTML = `
+      <span class="press-count">Druck #${liveLog_data.length - visible.length + i + 1}</span>
+      <span class="input-letter">${entry.ch}</span>
+      <span class="arrow"> → </span>
+      <span class="output-letter">${entry.out}</span>
+      <span class="rotor-state">Walzen: ${let_(entry.pos[0])} ${let_(entry.pos[1])} ${let_(entry.pos[2])}</span>
+    `;
+    container.appendChild(row);
+  });
+  container.scrollTop = container.scrollHeight;
+}
+
+function resetLive() {
+  livePos = [0,0,0];
+  liveInStr = '';
+  liveOutStr = '';
+  liveLog_data = [];
+  document.getElementById('liveInput').textContent = '–';
+  document.getElementById('liveOutput').textContent = '–';
+  document.getElementById('liveLog').innerHTML = '<div style="color:var(--dim); font-size:0.85rem; font-style:italic; padding: 0.5rem 0;">Noch keine Eingabe …</div>';
+  document.querySelectorAll('.key-i').forEach(k => k.classList.remove('lit-in','lit-out'));
+}
+
+/* Keyboard input */
+document.addEventListener('keydown', e => {
+  const ch = e.key.toUpperCase();
+  if (ALPHA.includes(ch)) pressKey(ch);
+});
+
+buildKeyboard();
+</script>
+</body>
+</html>
